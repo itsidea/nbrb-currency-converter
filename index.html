@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Конвертер валют НБРБ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .spinner { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+
+  <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+    
+    <!-- Header -->
+    <div class="p-6 border-b border-slate-800 bg-slate-900/50">
+      <div class="flex items-center justify-between mb-3">
+        <h1 class="text-xl font-bold text-white flex items-center gap-2">
+          <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span id="appTitle">Конвертер валют</span>
+        </h1>
+        <div class="flex items-center gap-2">
+          <select id="languageSelector" class="bg-slate-800 border border-slate-700 text-white text-xs font-medium rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer">
+            <option value="BY">🇧🇾 BY</option>
+            <option value="RU" selected>🇷🇺 RU</option>
+            <option value="EN">🇬🇧 EN</option>
+          </select>
+          <div id="statusBadge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-amber-500/10 text-amber-400 border-amber-500/20">
+            <svg class="w-3.5 h-3.5 spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            <span id="statusText">Загрузка...</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+        <span id="sourceText">Источник: api.nbrb.by</span>
+        <div class="flex items-center gap-2">
+          <span id="lastUpdated">—</span>
+          <button onclick="fetchRates()" id="refreshBtn" class="p-1 hover:bg-slate-800 rounded transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <div id="errorBox" class="hidden mt-3 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+        <div class="flex items-start gap-2">
+          <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span id="errorText">Ошибка</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Converter Body -->
+    <div class="p-6 space-y-5">
+      
+      <!-- From Section -->
+      <div class="space-y-2">
+        <label class="text-xs font-medium text-slate-400 uppercase tracking-wider" id="fromLabel">Отдаю</label>
+        <div class="flex gap-3">
+          <select id="fromCurrency" onchange="calculate()" class="bg-slate-800 border border-slate-700 text-white font-medium rounded-xl px-3 py-3.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer min-w-[110px]">
+            <option value="USD">🇺🇸 USD</option>
+            <option value="EUR">🇪🇺 EUR</option>
+            <option value="RUB">🇷🇺 RUB</option>
+            <option value="TRY">🇹🇷 TRY</option>
+            <option value="GEL">🇬🇪 GEL</option>
+            <option value="BYN">🇧🇾 BYN</option>
+          </select>
+          <input type="number" id="amount" value="1" step="any" oninput="calculate()" class="flex-1 bg-slate-800 border border-slate-700 text-white text-lg font-semibold rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all" placeholder="0.00">
+        </div>
+        <p id="fromCurrencyName" class="text-xs text-slate-500">Доллар США</p>
+      </div>
+
+      <!-- Swap Button -->
+      <div class="flex justify-center -my-2 relative z-10">
+        <button onclick="swapCurrencies()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 p-2.5 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- To Section -->
+      <div class="space-y-2">
+        <label class="text-xs font-medium text-slate-400 uppercase tracking-wider" id="toLabel">Получаю</label>
+        <div class="flex gap-3">
+          <select id="toCurrency" onchange="calculate()" class="bg-slate-800 border border-slate-700 text-white font-medium rounded-xl px-3 py-3.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer min-w-[110px]">
+            <option value="BYN" selected>🇧🇾 BYN</option>
+            <option value="USD">🇺🇸 USD</option>
+            <option value="EUR">🇪🇺 EUR</option>
+            <option value="RUB">🇷🇺 RUB</option>
+            <option value="TRY">🇹🇷 TRY</option>
+            <option value="GEL">🇬🇪 GEL</option>
+          </select>
+          <div class="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3.5 flex items-center">
+            <span id="result" class="text-2xl font-bold text-emerald-400">—</span>
+          </div>
+        </div>
+        <p id="toCurrencyName" class="text-xs text-slate-500">Белорусский рубль</p>
+      </div>
+
+      <!-- Rate Info -->
+      <div class="pt-4 border-t border-slate-800">
+        <div class="bg-slate-800/30 rounded-xl p-4 space-y-2">
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-slate-400" id="rateLabel">Обменный курс</span>
+            <span id="rateInfo" class="font-medium text-slate-200">—</span>
+          </div>
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-slate-400" id="inverseLabel">Обратный курс</span>
+            <span id="inverseInfo" class="font-medium text-slate-200">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 bg-slate-950/50 border-t border-slate-800 text-center">
+      <p class="text-[11px] text-slate-500 leading-relaxed">
+        <span id="footerText">Официальные курсы НБРБ • Масштаб учитывается автоматически<br>Автообновление каждые 10 минут</span>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const translations = {
+      BY: {
+        appTitle: 'Канвертар валют',
+        source: 'Крыніца: api.nbrb.by',
+        from: 'Аддаю',
+        to: 'Атрымліваю',
+        rate: 'Абменны курс',
+        inverse: 'Адваротны курс',
+        loading: 'Загрузка...',
+        connected: 'НБРБ Live',
+        error: 'Памылка',
+        offline: 'Па-за сецівам',
+        updated: 'Абноўлена',
+        footer: 'Афіцыйныя курсы НБРБ • Маштаб улічваецца аўтаматычна<br>Аўтаабнаўленне кожныя 10 хвілін',
+        currencyNames: {
+          USD: 'Долар ЗША', EUR: 'Еўра', RUB: 'Расійскі рубель',
+          TRY: 'Турэцкая ліра', GEL: 'Грузінскі лары', BYN: 'Беларускі рубель'
+        }
+      },
+      RU: {
+        appTitle: 'Конвертер валют',
+        source: 'Источник: api.nbrb.by',
+        from: 'Отдаю',
+        to: 'Получаю',
+        rate: 'Обменный курс',
+        inverse: 'Обратный курс',
+        loading: 'Загрузка...',
+        connected: 'НБРБ Live',
+        error: 'Ошибка',
+        offline: 'Offline',
+        updated: 'Обновлено',
+        footer: 'Официальные курсы НБРБ • Масштаб учитывается автоматически<br>Автообновление каждые 10 минут',
+        currencyNames: {
+          USD: 'Доллар США', EUR: 'Евро', RUB: 'Российский рубль',
+          TRY: 'Турецкая лира', GEL: 'Грузинский лари', BYN: 'Белорусский рубль'
+        }
+      },
+      EN: {
+        appTitle: 'Currency Converter',
+        source: 'Source: api.nbrb.by',
+        from: 'From',
+        to: 'To',
+        rate: 'Exchange Rate',
+        inverse: 'Inverse Rate',
+        loading: 'Loading...',
+        connected: 'NBRB Live',
+        error: 'Error',
+        offline: 'Offline',
+        updated: 'Updated',
+        footer: 'Official NBRB rates • Scale applied automatically<br>Auto-refresh every 10 minutes',
+        currencyNames: {
+          USD: 'US Dollar', EUR: 'Euro', RUB: 'Russian Ruble',
+          TRY: 'Turkish Lira', GEL: 'Georgian Lari', BYN: 'Belarusian Ruble'
+        }
+      }
+    };
+
+    let rates = {};
+    let currentLang = 'RU';
+
+    function t(key) {
+      return translations[currentLang][key] || key;
+    }
+
+    function updateLanguage() {
+      currentLang = document.getElementById('languageSelector').value;
+      document.getElementById('appTitle').textContent = t('appTitle');
+      document.getElementById('sourceText').textContent = t('source');
+      document.getElementById('fromLabel').textContent = t('from');
+      document.getElementById('toLabel').textContent = t('to');
+      document.getElementById('rateLabel').textContent = t('rate');
+      document.getElementById('inverseLabel').textContent = t('inverse');
+      const timeEl = document.getElementById('lastUpdated');
+      if (timeEl.dataset.time) {
+        timeEl.textContent = t('updated') + ': ' + timeEl.dataset.time;
+      }
+      document.getElementById('footerText').innerHTML = t('footer');
+      updateCurrencyNames();
+    }
+
+    function updateCurrencyNames() {
+      const fromCode = document.getElementById('fromCurrency').value;
+      const toCode = document.getElementById('toCurrency').value;
+      document.getElementById('fromCurrencyName').textContent = t('currencyNames')[fromCode];
+      document.getElementById('toCurrencyName').textContent = t('currencyNames')[toCode];
+    }
+
+    async function fetchRates() {
+      const statusBadge = document.getElementById('statusBadge');
+      const statusText = document.getElementById('statusText');
+      const errorBox = document.getElementById('errorBox');
+      const errorText = document.getElementById('errorText');
+      const refreshBtn = document.getElementById('refreshBtn');
+      
+      statusBadge.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-amber-500/10 text-amber-400 border-amber-500/20';
+      statusText.textContent = t('loading');
+      errorBox.classList.add('hidden');
+      refreshBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/rates');
+        if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+        const data = await response.json();
+        if (!data.success || !data.rates) throw new Error('Invalid response format');
+
+        rates = { BYN: 1 };
+        data.rates.forEach(item => {
+          rates[item.Cur_Abbreviation] = item.Cur_OfficialRate / item.Cur_Scale;
+        });
+
+        if (!rates.USD || !rates.EUR) throw new Error('Missing required currencies');
+
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('lastUpdated').dataset.time = timeStr;
+        document.getElementById('lastUpdated').textContent = t('updated') + ': ' + timeStr;
+        
+        statusBadge.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+        statusText.textContent = t('connected');
+        calculate();
+        
+      } catch (error) {
+        console.error('Fetch error:', error);
+        statusBadge.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-red-500/10 text-red-400 border-red-500/20';
+        statusText.textContent = t('offline');
+        errorText.textContent = `${t('error')}: ${error.message}`;
+        errorBox.classList.remove('hidden');
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    }
+
+    function calculate() {
+      const amount = parseFloat(document.getElementById('amount').value);
+      const fromCurrency = document.getElementById('fromCurrency').value;
+      const toCurrency = document.getElementById('toCurrency').value;
+      const resultEl = document.getElementById('result');
+      const rateInfoEl = document.getElementById('rateInfo');
+      const inverseInfoEl = document.getElementById('inverseInfo');
+
+      if (isNaN(amount) || amount <= 0) {
+        resultEl.textContent = '—';
+        rateInfoEl.textContent = '—';
+        inverseInfoEl.textContent = '—';
+        return;
+      }
+
+      const fromRate = rates[fromCurrency] || 0;
+      const toRate = rates[toCurrency] || 0;
+
+      if (fromRate === 0 || toRate === 0) {
+        resultEl.textContent = '—';
+        rateInfoEl.textContent = '—';
+        inverseInfoEl.textContent = '—';
+        return;
+      }
+
+      const amountInBYN = amount * fromRate;
+      const result = amountInBYN / toRate;
+      resultEl.textContent = result.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+      
+      const exchangeRate = fromRate / toRate;
+      rateInfoEl.textContent = `1 ${fromCurrency} = ${exchangeRate.toFixed(4)} ${toCurrency}`;
+      inverseInfoEl.textContent = `1 ${toCurrency} = ${(1 / exchangeRate).toFixed(4)} ${fromCurrency}`;
+      
+      updateCurrencyNames();
+    }
+
+    function swapCurrencies() {
+      const fromSelect = document.getElementById('fromCurrency');
+      const toSelect = document.getElementById('toCurrency');
+      const temp = fromSelect.value;
+      fromSelect.value = toSelect.value;
+      toSelect.value = temp;
+      calculate();
+    }
+
+    document.getElementById('languageSelector').addEventListener('change', updateLanguage);
+    updateLanguage();
+    fetchRates();
+    setInterval(fetchRates, 600000);
+  </script>
+</body>
+</html>
