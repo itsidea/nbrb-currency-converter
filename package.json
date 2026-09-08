@@ -1,9 +1,4 @@
 {
   "name": "nbrb-currency-converter",
-  "version": "1.0.0",
-  "scripts": {
-    "dev": "vercel dev",
-    "build": "echo 'No build needed'",
-    "start": "vercel"
-  }
+  "version": "1.0.0"
 }
